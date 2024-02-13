@@ -27,7 +27,7 @@ spec:
         image: 908671954593.dkr.ecr.us-east-2.amazonaws.com/go-fraud:latest
         envFrom:
         - configMapRef:
-            name: go-payment-cm
+            name: go-fraud-cm
         resources:
            requests:
              cpu: 100m
@@ -52,10 +52,10 @@ spec:
           exec:
               command:  ["/bin/grpc_health_probe", "-addr=:50052", "-rpc-header=authorization: Beared cookie"]
           initialDelaySeconds: 5
-          periodSeconds: 5
+          periodSeconds: 30
           failureThreshold: 3
           successThreshold: 1
-          timeoutSeconds: 10
+          timeoutSeconds: 5
         livenessProbe:
             exec:
               command:

@@ -26,7 +26,8 @@ import(
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
+	
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -135,7 +136,9 @@ func (g AppGrpcServer) StartGrpcServer(ctx context.Context){
 	}
 
 	var opts []grpc.ServerOption
-	opts = append(opts, grpc.UnaryInterceptor( otelgrpc.UnaryServerInterceptor() ))
+	opts = append(opts, grpc.UnaryInterceptor( otelgrpc.UnaryServerInterceptor(
+															otelgrpc.WithInterceptorFilter(filters.Not(filters.HealthCheck())),
+											)))
 	opts = append(opts, grpc.KeepaliveParams(keepalive.ServerParameters {
 															MaxConnectionAge: time.Second * 30,
 															MaxConnectionAgeGrace: time.Second * 10,
