@@ -32,6 +32,9 @@ func getEnv() {
 	if os.Getenv("POD_NAME") !=  "" {
 		infoPod.PodName = os.Getenv("POD_NAME")
 	}
+	if os.Getenv("VERSION") !=  "" {
+		infoPod.Version = os.Getenv("VERSION")
+	}
 	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") !=  "" {	
 		infoPod.OtelExportEndpoint = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	}

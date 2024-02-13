@@ -1,6 +1,6 @@
 #AWS_DEFAULT_REGION us-east-2
-#EKS_CLUSTER_NAME arch-eks
-#EKS_KUBECTL_ROLE_ARN arn:aws:iam::908671954593:role/CodeBuildKubectlRole
+#EKS_CLUSTER_NAME arch-eks-02
+#EKS_KUBECTL_ROLE_ARN arn:aws:iam::992382474575:role/eks-admin-Eliezer
 
 version: 0.2
 
@@ -53,7 +53,7 @@ phases:
       - kubectl apply -f .kubernetes/aws/configmap.yaml
       - kubectl apply -f .kubernetes/aws/hpa.yaml
       - kubectl apply -f .kubernetes/aws/deployment.yaml
-      - kubectl apply -f .kubernetes/aws/svc.yaml
+      - kubectl apply -f .kubernetes/aws/svc-cluster-headless.yaml
 
       - echo Start rollout...   
       - kubectl rollout restart deployment/go-fraud -n test-a

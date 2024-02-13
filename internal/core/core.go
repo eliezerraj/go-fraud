@@ -7,6 +7,7 @@ type AppServer struct {
 
 type InfoPod struct {
 	PodName				string `json:"pod_name"`
+	Version				string `json:"version"`
 	OSPID				string `json:"os_pid"`
 	IPAddress			string `json:"ip_address"`
 	AvailabilityZone 	string `json:"availability_zone"`

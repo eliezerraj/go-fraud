@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: &app-name svc-go-fraud
-  namespace: test-b
+  namespace: test-a
   labels:
     app: *app-name
 spec:

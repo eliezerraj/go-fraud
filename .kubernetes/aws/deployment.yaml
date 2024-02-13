@@ -50,7 +50,7 @@ spec:
           protocol: TCP
         readinessProbe:
           exec:
-              command:  ["/bin/grpc_health_probe", "-addr=:50051", "-rpc-header=authorization: Beared cookie"]
+              command:  ["/bin/grpc_health_probe", "-addr=:50052", "-rpc-header=authorization: Beared cookie"]
           initialDelaySeconds: 5
           periodSeconds: 5
           failureThreshold: 3

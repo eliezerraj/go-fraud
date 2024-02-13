@@ -79,6 +79,7 @@ func (s server) GetPodInfo(ctx context.Context, in *proto.PodInfoRequest) (*prot
 								PodName: 			s.InfoPod.PodName,
 								AvailabilityZone:	s.InfoPod.AvailabilityZone,
 								GrpcHost:			s.InfoPod.GrpcHost,
+								Version:			s.InfoPod.Version,
 							}
 
 	res := &proto.PodInfoResponse {
