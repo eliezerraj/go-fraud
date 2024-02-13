@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: &app-name go-fraud
+  namespace: test-a
+  labels:
+    app: *app-name
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: *app-name
+  template:
+    metadata:
+      labels:
+        app: *app-name
+    spec:
+      serviceAccountName: sa-go-fraud
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 2000
+        fsGroup: 3000
+      containers:
+      - name: *app-name
+        image: 908671954593.dkr.ecr.us-east-2.amazonaws.com/go-fraud:latest
+        envFrom:
+        - configMapRef:
+            name: go-payment-cm
+        resources:
+           requests:
+             cpu: 100m
+             memory: 50Mi
+           limits:
+             cpu: 200m
+             memory: 150Mi
+        securityContext:
+          seccompProfile:
+            type: RuntimeDefault
+          runAsNonRoot: true
+          runAsUser: 1100
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - name: http
+          containerPort: 50052
+          protocol: TCP
+        readinessProbe:
+          exec:
+              command:  ["/bin/grpc_health_probe", "-addr=:50051", "-rpc-header=authorization: Beared cookie"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+          timeoutSeconds: 10
+        livenessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - "ps -A | grep go-fraud | grep -v grep"
+            initialDelaySeconds: 5
+            periodSeconds: 30
+            failureThreshold: 3
+            successThreshold: 1
+            timeoutSeconds: 5
+      terminationGracePeriodSeconds: 60
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                topologyKey: topology.kubernetes.io/zone
+                labelSelector:
+                  matchLabels:
+                    app: *app-name
+              weight: 100

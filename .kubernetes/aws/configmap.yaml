@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: &app-name go-fraud-cm
+  namespace: test-a
+  labels:
+    app: *app-name
+data:
+  API_VERSION: "1.2"
+  POD_NAME: "go-fraud"
+  GRPC_HOST: ":50052"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "arch-eks-02-xray-collector.default.svc.cluster.local:4317"
