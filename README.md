@@ -1,5 +1,6 @@
 # go-fraud
-go-fraud
+
+    POC for test purposes.
 
 ## Compile grpc proto
 
