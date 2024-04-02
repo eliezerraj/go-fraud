@@ -12,6 +12,7 @@ import(
 
 	"github.com/go-fraud/internal/core"
 	"github.com/go-fraud/internal/handler"
+	"github.com/go-fraud/internal/service"
 )
 
 var(
@@ -20,6 +21,7 @@ var(
 	infoServer	core.InfoServer
 	appServer	core.AppServer
 	configOTEL	core.ConfigOTEL
+	sageMakerEndpoint string
 )
 
 func getEnv() {
@@ -38,6 +40,11 @@ func getEnv() {
 	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") !=  "" {	
 		infoPod.OtelExportEndpoint = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	}
+
+	if os.Getenv("SAGEMAKER_ENDPOINT") !=  "" {	
+		sageMakerEndpoint = os.Getenv("SAGEMAKER_ENDPOINT")
+	}
+
 }
 
 func init(){
@@ -82,6 +89,8 @@ func main() {
 
 	ctx := context.Background()
 
-	appGrpcServer := handler.NewAppGrpcServer(&appServer)
+	service := service.NewWorkerService(sageMakerEndpoint)
+
+	appGrpcServer := handler.NewAppGrpcServer(&appServer, service)
 	appGrpcServer.StartGrpcServer(ctx)					
 }

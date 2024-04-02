@@ -9,6 +9,8 @@ import(
 	"syscall"
 	
 	"github.com/go-fraud/internal/core"
+	"github.com/go-fraud/internal/service"
+
 	"github.com/rs/zerolog/log"
 
 	"google.golang.org/grpc"
@@ -36,17 +38,21 @@ var childLogger = log.With().Str("handler", "handler").Logger()
 var tracer trace.Tracer
 
 type AppGrpcServer struct {
-	appServer 	*core.AppServer
+	appServer 			*core.AppServer
+	workerservice		*service.WorkerService
 }
 
 type server struct{
-	InfoPod		*core.InfoPod
+	InfoPod			*core.InfoPod
+	Workerservice	*service.WorkerService
 }
 
-func NewAppGrpcServer(appServer *core.AppServer) (AppGrpcServer) {
+func NewAppGrpcServer(	appServer *core.AppServer,
+						workerservice	*service.WorkerService) (AppGrpcServer) {
 	childLogger.Debug().Msg("NewAppGrpcServerr")
 	return AppGrpcServer{
 		appServer: appServer,
+		workerservice: workerservice,
 	}
 }
 
@@ -74,7 +80,6 @@ func (s server) GetPodInfo(ctx context.Context, in *proto.PodInfoRequest) (*prot
 							"svc.GetPodInfo",
 						)
 	defer span.End()
-	time.Sleep(1 * time.Second) 
 
 	podInfo := proto.PodInfo{	IpAddress: 			s.InfoPod.IPAddress,
 								PodName: 			s.InfoPod.PodName,
@@ -88,6 +93,74 @@ func (s server) GetPodInfo(ctx context.Context, in *proto.PodInfoRequest) (*prot
 	}
 
 	log.Debug().Interface("res :", res).Msg("")
+
+	return res, nil
+}
+
+func (s server) CheckPaymentFraud(ctx context.Context, in *proto.PaymentRequest) (*proto.PaymentResponse, error) {
+	log.Debug().Msg("CheckPaymentFraud")
+
+	tracer := otel.Tracer("go-fraud")
+	_, span := tracer.Start(ctx, 
+							"svc.CheckPaymentFraud",
+						)
+	defer span.End()
+
+	//log.Debug().Interface("in :", in).Msg("")
+	log.Debug().Msg("---------------------------------------------")
+
+	paymentAt := in.Payment.PaymentAt.AsTime()
+
+	paymentFraud := core.PaymentFraud {	AccountID: in.Payment.AccountId,
+										CardNumber: in.Payment.CardNumber,
+										TerminalName: in.Payment.TerminalName, 
+										CoordX: in.Payment.CoordX, 
+										CoordY: in.Payment.CoordY, 
+										PaymentAt: paymentAt, 
+										CardType: in.Payment.CardType,
+										CardModel: in.Payment.CardModel,
+										Currency: in.Payment.Currency,
+										MCC: in.Payment.Mcc,
+										Amount: in.Payment.Amount,
+										Status: in.Payment.Status,
+										Tx1Day: in.Payment.Tx_1D,
+										Avg1Day: in.Payment.Avg_1D,
+										Tx7Day: in.Payment.Tx_7D,
+										Avg7Day: in.Payment.Avg_7D,
+										Tx30Day: in.Payment.Tx_30D,
+										Avg30Day: in.Payment.Avg_30D,
+										TimeBtwTx: in.Payment.TimeBtwCcTx,
+									}
+
+	res_payment_fraud, err := s.Workerservice.CheckPaymentFraud(ctx, paymentFraud)								
+	if err != nil {
+		log.Error().Err(err).Msg("error CheckPaymentFraud")
+		return nil, err
+	}
+
+	res_payment := proto.Payment{	AccountId: in.Payment.AccountId,
+									CardNumber: in.Payment.CardNumber,
+									TerminalName: in.Payment.TerminalName, 
+									PaymentAt: in.Payment.PaymentAt, 
+									CardType: in.Payment.CardType,
+									CardModel: in.Payment.CardModel,
+									Currency: in.Payment.Currency,
+									Mcc: in.Payment.Mcc,
+									Amount: in.Payment.Amount,
+									Status: in.Payment.Status,
+									Tx_1D: in.Payment.Tx_1D,
+									Avg_1D: in.Payment.Avg_1D,
+									Tx_7D: in.Payment.Tx_7D,
+									Avg_7D: in.Payment.Avg_7D,
+									Tx_30D: in.Payment.Tx_30D,
+									Avg_30D: in.Payment.Avg_30D,
+									TimeBtwCcTx: in.Payment.TimeBtwCcTx,
+									Fraud: res_payment_fraud.Fraud,
+								}
+
+	res := &proto.PaymentResponse {
+		Payment: &res_payment,
+	}
 
 	return res, nil
 }
@@ -136,15 +209,16 @@ func (g AppGrpcServer) StartGrpcServer(ctx context.Context){
 	}
 
 	var opts []grpc.ServerOption
-	opts = append(opts, grpc.UnaryInterceptor( otelgrpc.UnaryServerInterceptor(
-															otelgrpc.WithInterceptorFilter(filters.Not(filters.HealthCheck())),
+	opts = append(opts, grpc.UnaryInterceptor( 	otelgrpc.UnaryServerInterceptor(
+												otelgrpc.WithInterceptorFilter(filters.Not(filters.HealthCheck())),
 											)))
-	opts = append(opts, grpc.KeepaliveParams(keepalive.ServerParameters {
-															MaxConnectionAge: time.Second * 30,
-															MaxConnectionAgeGrace: time.Second * 10,
+	opts = append(opts, grpc.KeepaliveParams(	keepalive.ServerParameters {
+												MaxConnectionAge: time.Second * 30,
+												MaxConnectionAgeGrace: time.Second * 10,
 											}))
 
-	_server := 	&server{InfoPod: g.appServer.InfoPod}									
+	_server := 	&server{ 	InfoPod: 		g.appServer.InfoPod,
+							Workerservice: 	g.workerservice }									
   	_grpcServer := grpc.NewServer(opts...)
   	proto.RegisterFraudServiceServer(_grpcServer, _server)
 
