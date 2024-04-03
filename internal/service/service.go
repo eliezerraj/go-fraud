@@ -4,6 +4,7 @@ import(
 	"context"
 	"strconv"
 	"fmt"
+	"math"
 
 	"github.com/rs/zerolog/log"
 
@@ -14,7 +15,6 @@ import(
 	"github.com/go-fraud/internal/core"
 	"go.opentelemetry.io/otel"
 )
-
 
 var childLogger = log.With().Str("service", "service").Logger()
 
@@ -28,6 +28,11 @@ func NewWorkerService(sageMakerEndpoint	string) *WorkerService{
 	return &WorkerService{
 		sageMakerEndpoint:	sageMakerEndpoint,
 	}
+}
+
+type Point struct {
+    X float64
+    Y float64
 }
 
 func (s WorkerService) CheckPaymentFraud(ctx context.Context, 
@@ -46,8 +51,26 @@ func (s WorkerService) CheckPaymentFraud(ctx context.Context,
 
 	client := sagemakerruntime.NewFromConfig(cfg)
 
-	childLogger.Debug().Msg("*********************************************")
-	fmt.Printf("%v, %v, %v, %v, %v, %v, %v, %v", 
+	var ohe_card_model_chip, ohe_card_model_virtual,ohe_card_type int
+	if payment.CardModel == "VIRTUAL" {
+		ohe_card_model_chip = 0
+		ohe_card_model_virtual = 1
+	} else {
+		ohe_card_model_chip = 1
+		ohe_card_model_virtual = 0
+	}
+
+	ohe_card_type = 1
+
+    person 			:= Point{0, 0}
+    terminal_order 	:= Point{float64(payment.CoordX), float64(payment.CoordY)}
+	distance := math.Sqrt(math.Pow(terminal_order.X-person.X, 2) + math.Pow(terminal_order.Y-person.Y, 2))
+
+	payload := fmt.Sprintf("%v, %v, %v, %v, %v, %v, %v, %v, %v, %v, %v, %v", 
+									distance,
+									ohe_card_model_chip,
+									ohe_card_model_virtual,
+									ohe_card_type,
 									payment.Amount,
 									payment.Tx1Day,
 									payment.Avg1Day,
@@ -57,7 +80,8 @@ func (s WorkerService) CheckPaymentFraud(ctx context.Context,
 									payment.Avg30Day,
 									payment.TimeBtwTx)
 	
-	payload := "9.0, 23.0, 7.0, 90.0, 4.0, 365.0, 17.0, 263.529412, 28.0, 238.714286, 97582.0"
+	fmt.Println("=================> (payload) :",payload)
+
 	input := &sagemakerruntime.InvokeEndpointInput{EndpointName: &s.sageMakerEndpoint,
 													ContentType:  aws.String("text/csv"),
 													Body:         []byte(payload),
