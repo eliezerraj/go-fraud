@@ -80,7 +80,7 @@ func (s WorkerService) CheckPaymentFraud(ctx context.Context,
 									payment.Avg30Day,
 									payment.TimeBtwTx)
 	
-	fmt.Println("=================> (payload) :",payload)
+	log.Debug().Interface("=======>payload :", payload).Msg("")
 
 	input := &sagemakerruntime.InvokeEndpointInput{EndpointName: &s.sageMakerEndpoint,
 													ContentType:  aws.String("text/csv"),
@@ -102,6 +102,8 @@ func (s WorkerService) CheckPaymentFraud(ctx context.Context,
 	}
 
 	payment.Fraud = responseFloat
+
+	log.Debug().Interface("=======> (Fraud) :", payment.Fraud).Msg("")
 
 	return &payment, nil
 }
