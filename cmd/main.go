@@ -5,7 +5,6 @@ import(
 	"net"
 	"os"
 	"io/ioutil"
-	"fmt"
 
 	"github.com/joho/godotenv"
 
