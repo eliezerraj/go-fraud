@@ -51,6 +51,7 @@ phases:
       - kubectl apply -f .kubernetes/aws/ns.yaml 
       - kubectl apply -f .kubernetes/aws/service-account.yaml 
       - kubectl apply -f .kubernetes/aws/configmap.yaml
+      - kubectl apply -f .kubernetes/aws/secret-certs.yaml
       - kubectl apply -f .kubernetes/aws/hpa.yaml
       - kubectl apply -f .kubernetes/aws/deployment.yaml
       - kubectl apply -f .kubernetes/aws/svc-cluster-headless.yaml

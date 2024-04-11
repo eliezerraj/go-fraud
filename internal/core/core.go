@@ -3,6 +3,7 @@ package core
 type AppServer struct {
 	InfoPod			*InfoPod 		`json:"info_pod"`
 	InfoServer     	*InfoServer     `json:"info_server"`
+	Cert			*Cert			`json:"cert"`
 }
 
 type InfoPod struct {

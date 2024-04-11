@@ -4,6 +4,8 @@ import(
 	"context"
 	"net"
 	"os"
+	"io/ioutil"
+	"fmt"
 
 	"github.com/joho/godotenv"
 
@@ -22,6 +24,9 @@ var(
 	appServer	core.AppServer
 	configOTEL	core.ConfigOTEL
 	sageMakerEndpoint string
+	cert		core.Cert
+	certPEM, certPrivKeyPEM	[]byte
+	isTLS		= 	false
 )
 
 func getEnv() {
@@ -41,10 +46,15 @@ func getEnv() {
 		infoPod.OtelExportEndpoint = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	}
 
+	if (os.Getenv("TLS") != "") {
+		if (os.Getenv("TLS") != "false") {	
+			isTLS = true
+		}
+	}
+
 	if os.Getenv("SAGEMAKER_ENDPOINT") !=  "" {	
 		sageMakerEndpoint = os.Getenv("SAGEMAKER_ENDPOINT")
 	}
-
 }
 
 func init(){
@@ -77,9 +87,27 @@ func init(){
 			}
 		}
 	}
+
+	if (isTLS) {
+		certPEM, err = ioutil.ReadFile("/var/pod/cert/serverB64.crt")
+		if err != nil {
+			log.Info().Err(err).Msg("Cert certPEM nao encontrado")
+		} else {
+			cert.CertPEM = certPEM
+		}
+
+		certPrivKeyPEM, err = ioutil.ReadFile("/var/pod/cert/serverB64.key")
+		if err != nil {
+			log.Info().Err(err).Msg("Cert CertPrivKeyPEM nao encontrado")
+		} else {
+			cert.CertPrivKeyPEM = certPrivKeyPEM
+		}
+	}
+
 	infoPod.ConfigOTEL = &configOTEL
 	appServer.InfoPod =	&infoPod
 	appServer.InfoServer = &infoServer
+	appServer.Cert = &cert
 }
 
 func main() {

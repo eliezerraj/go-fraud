@@ -2,11 +2,14 @@ package handler
 
 import(
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"time"
 	"os/signal"
 	"syscall"
+	"encoding/base64"
+	"crypto/tls"
 	
 	"github.com/go-fraud/internal/core"
 	"github.com/go-fraud/internal/service"
@@ -14,6 +17,7 @@ import(
 	"github.com/rs/zerolog/log"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -57,7 +61,7 @@ func NewAppGrpcServer(	appServer *core.AppServer,
 }
 
 func middleware(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error){
-	log.Debug().Msg("----------------------------------------------------")
+	childLogger.Debug().Msg("----------------------------------------------------")
 
 	headers, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
@@ -68,12 +72,12 @@ func middleware(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo
 		return nil, status.Error(codes.Unauthenticated, "Not Authorized")
 	}
 
-	log.Debug().Msg("----------------------------------------------------")
+	childLogger.Debug().Msg("----------------------------------------------------")
 	return handler(ctx, req) 
 }
 
 func (s server) GetPodInfo(ctx context.Context, in *proto.PodInfoRequest) (*proto.PodInfoResponse, error) {
-	log.Debug().Msg("GetPodInfo")
+	childLogger.Debug().Msg("GetPodInfo")
 
 	tracer := otel.Tracer("go-fraud")
 	_, span := tracer.Start(ctx, 
@@ -92,7 +96,7 @@ func (s server) GetPodInfo(ctx context.Context, in *proto.PodInfoRequest) (*prot
 		PodInfo: &podInfo,
 	}
 
-	log.Debug().Interface("res :", res).Msg("")
+	childLogger.Debug().Interface("res :", res).Msg("")
 
 	return res, nil
 }
@@ -165,6 +169,42 @@ func (s server) CheckPaymentFraud(ctx context.Context, in *proto.PaymentRequest)
 	return res, nil
 }
 
+func loadServerCertsTLS(cert *core.Cert) (credentials.TransportCredentials, error) {
+	log.Debug().Msg("loadCertsTLS")
+
+	var serverTLSConf *tls.Config
+
+	certPEM_Raw, err := base64.StdEncoding.DecodeString(string(cert.CertPEM))
+	if err != nil {
+		childLogger.Error().Err(err).Msg("Erro certPEM_Raw !!!")
+		return nil, err
+	}
+	certPrivKeyPEM_Raw, err := base64.StdEncoding.DecodeString(string(cert.CertPrivKeyPEM))
+	if err != nil {
+		childLogger.Error().Err(err).Msg("Erro certPrivKeyPEM_Raw !!!")
+		return nil, err
+	}
+	
+	childLogger.Info().Msg("------------------------------------------------")
+	fmt.Println(string(certPEM_Raw))
+	childLogger.Info().Msg("------------------------------------------------")
+	fmt.Println(string(certPrivKeyPEM_Raw))
+	childLogger.Info().Msg("------------------------------------------------")
+
+	serverCert, err := tls.X509KeyPair( certPEM_Raw, certPrivKeyPEM_Raw)
+	if err != nil {
+		childLogger.Error().Err(err).Msg("Erro Load X509 KeyPair")
+		return nil, err
+	}
+
+	serverTLSConf = &tls.Config{
+		Certificates: []tls.Certificate{serverCert},
+		ClientAuth:   tls.NoClientCert,
+	}
+
+	return credentials.NewTLS(serverTLSConf), nil
+}
+
 func (g AppGrpcServer) StartGrpcServer(ctx context.Context){
 	childLogger.Info().Msg("StartGrpcServer")
 	
@@ -200,7 +240,6 @@ func (g AppGrpcServer) StartGrpcServer(ctx context.Context){
 			childLogger.Error().Err(err).Msg("Erro closing OTEL tracer !!!")
 		}
 	}()
-	// ----------------------------------
 
 	lis, err := net.Listen("tcp", g.appServer.InfoServer.Port)
 	if err != nil {
@@ -217,13 +256,28 @@ func (g AppGrpcServer) StartGrpcServer(ctx context.Context){
 												MaxConnectionAgeGrace: time.Second * 10,
 											}))
 
+	// ----------------------------------
+	if string(g.appServer.Cert.CertPEM) != "" {
+		tlsCredentials, err := loadServerCertsTLS(g.appServer.Cert)
+		if err != nil {
+			log.Error().Err(err).Msg("Erro loadCertsTLS")
+		}
+		opts = append(opts, grpc.Creds( tlsCredentials ))
+	}	
+	//------------------------------------------
+
+	_grpcServer := grpc.NewServer(opts...)
+
 	_server := 	&server{ 	InfoPod: 		g.appServer.InfoPod,
-							Workerservice: 	g.workerservice }									
-  	_grpcServer := grpc.NewServer(opts...)
-  	proto.RegisterFraudServiceServer(_grpcServer, _server)
+							Workerservice: 	g.workerservice }
+
+  	proto.RegisterFraudServiceServer(_grpcServer, 
+									_server)
 
 	healthService := healthcheck.NewHealthChecker()
-	grpc_health_v1.RegisterHealthServer(_grpcServer, healthService)
+
+	grpc_health_v1.RegisterHealthServer(_grpcServer, 
+										healthService)
 
 	go func(){
 		log.Info().Str("Starting server : " , g.appServer.InfoServer.Port).Msg("")
