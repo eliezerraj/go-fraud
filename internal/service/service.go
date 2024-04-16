@@ -80,6 +80,7 @@ func (s WorkerService) CheckPaymentFraud(ctx context.Context,
 									payment.Avg30Day,
 									payment.TimeBtwTx)
 	
+	log.Debug().Msg("=======>header:distance,ohe_card_model_chip,ohe_card_model_virtual,ohe_card_type,payment.Amount,payment.Tx1Day,payment.Avg1Day,payment.Tx7Day,payment.Avg7Day,payment.Tx30Day,payment.Avg30Day,payment.TimeBtwTx")
 	log.Debug().Interface("=======>payload :", payload).Msg("")
 
 	input := &sagemakerruntime.InvokeEndpointInput{EndpointName: &s.sageMakerEndpoint,

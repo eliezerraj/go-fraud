@@ -88,14 +88,14 @@ func init(){
 	}
 
 	if (isTLS) {
-		certPEM, err = ioutil.ReadFile("/var/pod/cert/serverB64.crt")
+		certPEM, err = ioutil.ReadFile("/var/pod/cert/serverB64.crt") // local: server_fraud_B64.crt
 		if err != nil {
 			log.Info().Err(err).Msg("Cert certPEM nao encontrado")
 		} else {
 			cert.CertPEM = certPEM
 		}
 
-		certPrivKeyPEM, err = ioutil.ReadFile("/var/pod/cert/serverB64.key")
+		certPrivKeyPEM, err = ioutil.ReadFile("/var/pod/cert/serverB64.key") // local: server_fraud_B64.key
 		if err != nil {
 			log.Info().Err(err).Msg("Cert CertPrivKeyPEM nao encontrado")
 		} else {
@@ -112,6 +112,8 @@ func init(){
 func main() {
 	log.Debug().Msg("----------------------------------------------------")
 	log.Debug().Msg("main")
+	log.Debug().Msg("----------------------------------------------------")
+	log.Debug().Interface("=>AppServer : ", AppServer).Msg("")
 	log.Debug().Msg("----------------------------------------------------")
 
 	ctx := context.Background()
