@@ -113,7 +113,7 @@ func main() {
 	log.Debug().Msg("----------------------------------------------------")
 	log.Debug().Msg("main")
 	log.Debug().Msg("----------------------------------------------------")
-	log.Debug().Interface("=>AppServer : ", AppServer).Msg("")
+	log.Debug().Interface("=>AppServer : ", appServer).Msg("")
 	log.Debug().Msg("----------------------------------------------------")
 
 	ctx := context.Background()
