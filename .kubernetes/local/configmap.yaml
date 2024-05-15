@@ -6,8 +6,8 @@ metadata:
   labels:
     app: *app-name
 data:
-  VERSION: "1.0"
-  POD_NAME: "go-fraud"
+  API_VERSION: "2.0"
+  POD_NAME: "go-fraud.local"
   GRPC_HOST: ":50052"
   OTEL_EXPORTER_OTLP_ENDPOINT: "arch-eks-02-xray-collector.default.svc.cluster.local:4317"
   SAGEMAKER_ENDPOINT: "xgboost-serverless-ep-fraud-model-v3-2024-04-07-02-38-32"

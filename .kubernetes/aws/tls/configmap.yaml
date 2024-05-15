@@ -6,7 +6,7 @@ metadata:
   labels:
     app: *app-name
 data:
-  VERSION: "2.0"
+  API_VERSION: "2.0"
   POD_NAME: "go-fraud,k8"
   GRPC_HOST: ":50052"
   OTEL_EXPORTER_OTLP_ENDPOINT: "arch-eks-02-xray-collector.default.svc.cluster.local:4317"
