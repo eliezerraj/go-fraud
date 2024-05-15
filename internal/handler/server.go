@@ -40,27 +40,31 @@ import(
 
 var childLogger = log.With().Str("handler", "handler").Logger()
 var tracer trace.Tracer
-
+//-------------------------------------------------------
+type server struct{
+	AppServer			*core.AppServer
+	Workerservice		*service.WorkerService
+}
+//------------------------------------------------------
 type AppGrpcServer struct {
 	appServer 			*core.AppServer
 	workerservice		*service.WorkerService
 }
 
-type server struct{
-	InfoPod			*core.InfoPod
-	Workerservice	*service.WorkerService
-}
-
 func NewAppGrpcServer(	appServer *core.AppServer,
 						workerservice	*service.WorkerService) (AppGrpcServer) {
 	childLogger.Debug().Msg("NewAppGrpcServerr")
+
 	return AppGrpcServer{
 		appServer: appServer,
 		workerservice: workerservice,
 	}
 }
-
-func middleware(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error){
+//-------------------------------------------------------
+func middleware(ctx context.Context, 
+				req interface{}, 
+				info *grpc.UnaryServerInfo, 
+				handler grpc.UnaryHandler) (interface{}, error){
 	childLogger.Debug().Msg("----------------------------------------------------")
 
 	headers, ok := metadata.FromIncomingContext(ctx)
@@ -76,7 +80,8 @@ func middleware(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo
 	return handler(ctx, req) 
 }
 
-func (s server) GetPodInfo(ctx context.Context, in *proto.PodInfoRequest) (*proto.PodInfoResponse, error) {
+func (s server) GetPodInfo(	ctx context.Context, 
+							in *proto.PodInfoRequest) (*proto.PodInfoResponse, error) {
 	childLogger.Debug().Msg("GetPodInfo")
 
 	tracer := otel.Tracer("go-fraud")
@@ -85,11 +90,11 @@ func (s server) GetPodInfo(ctx context.Context, in *proto.PodInfoRequest) (*prot
 						)
 	defer span.End()
 
-	podInfo := proto.PodInfo{	IpAddress: 			s.InfoPod.IPAddress,
-								PodName: 			s.InfoPod.PodName,
-								AvailabilityZone:	s.InfoPod.AvailabilityZone,
-								GrpcHost:			s.InfoPod.GrpcHost,
-								Version:			s.InfoPod.Version,
+	podInfo := proto.PodInfo{	IpAddress: 			s.AppServer.InfoPod.IPAddress,
+								PodName: 			s.AppServer.InfoPod.PodName,
+								AvailabilityZone:	s.AppServer.InfoPod.AvailabilityZone,
+								GrpcHost:			s.AppServer.Server.Port,
+								Version:			s.AppServer.InfoPod.ApiVersion,
 							}
 
 	res := &proto.PodInfoResponse {
@@ -101,7 +106,8 @@ func (s server) GetPodInfo(ctx context.Context, in *proto.PodInfoRequest) (*prot
 	return res, nil
 }
 
-func (s server) CheckPaymentFraud(ctx context.Context, in *proto.PaymentRequest) (*proto.PaymentResponse, error) {
+func (s server) CheckPaymentFraud(	ctx context.Context, 
+									in *proto.PaymentRequest) (*proto.PaymentResponse, error) {
 	log.Debug().Msg("CheckPaymentFraud")
 
 	tracer := otel.Tracer("go-fraud")
@@ -185,9 +191,9 @@ func loadServerCertsTLS(cert *core.Cert) (credentials.TransportCredentials, erro
 		return nil, err
 	}
 	
-	childLogger.Info().Msg("------------------------------------------------")
+	childLogger.Info().Msg("-------------------Server CRT-----------------------------")
 	fmt.Println(string(certPEM_Raw))
-	childLogger.Info().Msg("------------------------------------------------")
+	childLogger.Info().Msg("--------------------Server Key --------------------")
 	fmt.Println(string(certPrivKeyPEM_Raw))
 	childLogger.Info().Msg("------------------------------------------------")
 
@@ -209,10 +215,10 @@ func (g AppGrpcServer) StartGrpcServer(ctx context.Context){
 	childLogger.Info().Msg("StartGrpcServer")
 	
 	// ---------------------- OTEL
-	childLogger.Info().Str("OTEL_EXPORTER_OTLP_ENDPOINT :", g.appServer.InfoPod.OtelExportEndpoint).Msg("")
+	childLogger.Info().Str("OTEL_EXPORTER_OTLP_ENDPOINT :", g.appServer.ConfigOTEL.OtelExportEndpoint).Msg("")
 	traceExporter, err := otlptracegrpc.New(ctx, 
 											otlptracegrpc.WithInsecure(),
-											otlptracegrpc.WithEndpoint(g.appServer.InfoPod.OtelExportEndpoint),
+											otlptracegrpc.WithEndpoint(g.appServer.ConfigOTEL.OtelExportEndpoint),
 											)
 	if err != nil {
 		log.Error().Err(err).Msg("ERRO otlptracegrpc")
@@ -241,7 +247,7 @@ func (g AppGrpcServer) StartGrpcServer(ctx context.Context){
 		}
 	}()
 
-	lis, err := net.Listen("tcp", g.appServer.InfoServer.Port)
+	lis, err := net.Listen("tcp", g.appServer.Server.Port)
 	if err != nil {
 		log.Error().Err(err).Msg("ERRO FATAL na abertura do service grpc")
 		panic(err)
@@ -257,8 +263,8 @@ func (g AppGrpcServer) StartGrpcServer(ctx context.Context){
 											}))
 
 	// ----------------------------------
-	if string(g.appServer.Cert.CertPEM) != "" {
-		tlsCredentials, err := loadServerCertsTLS(g.appServer.Cert)
+	if g.appServer.Server.Cert.IsTLS == true  {
+		tlsCredentials, err := loadServerCertsTLS(g.appServer.Server.Cert)
 		if err != nil {
 			log.Error().Err(err).Msg("Erro loadCertsTLS")
 		}
@@ -268,7 +274,7 @@ func (g AppGrpcServer) StartGrpcServer(ctx context.Context){
 
 	_grpcServer := grpc.NewServer(opts...)
 
-	_server := 	&server{ 	InfoPod: 		g.appServer.InfoPod,
+	_server := 	&server{ 	AppServer: 		g.appServer,
 							Workerservice: 	g.workerservice }
 
   	proto.RegisterFraudServiceServer(_grpcServer, 
@@ -280,7 +286,7 @@ func (g AppGrpcServer) StartGrpcServer(ctx context.Context){
 										healthService)
 
 	go func(){
-		log.Info().Str("Starting server : " , g.appServer.InfoServer.Port).Msg("")
+		log.Info().Str("Starting server : " , g.appServer.Server.Port).Msg("")
 		if err := _grpcServer.Serve(lis); err != nil {
 			log.Error().Err(err).Msg("Failed to server")
 		}

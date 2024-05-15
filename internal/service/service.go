@@ -17,7 +17,7 @@ import(
 )
 
 var childLogger = log.With().Str("service", "service").Logger()
-
+//-----------------------------------------------
 type WorkerService struct {
 	sageMakerEndpoint	string
 }
@@ -29,7 +29,7 @@ func NewWorkerService(sageMakerEndpoint	string) *WorkerService{
 		sageMakerEndpoint:	sageMakerEndpoint,
 	}
 }
-
+//----------------------------------------------
 type Point struct {
     X float64
     Y float64
