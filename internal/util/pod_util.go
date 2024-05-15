@@ -36,8 +36,8 @@ func GetInfoPod() (	core.InfoPod,
 	if os.Getenv("API_VERSION") !=  "" {
 		infoPod.ApiVersion = os.Getenv("API_VERSION")
 	}
-	if os.Getenv("PORT") !=  "" {
-		server.Port = os.Getenv("PORT")
+	if os.Getenv("GRPC_HOST") !=  "" {
+		server.Port = os.Getenv("GRPC_HOST")
 	}
 	if os.Getenv("POD_NAME") !=  "" {
 		infoPod.PodName = os.Getenv("POD_NAME")
