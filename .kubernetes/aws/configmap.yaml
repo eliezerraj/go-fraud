@@ -12,3 +12,4 @@ data:
   OTEL_EXPORTER_OTLP_ENDPOINT: "arch-eks-02-xray-collector.default.svc.cluster.local:4317"
   SAGEMAKER_ENDPOINT: "xgboost-serverless-ep-fraud-model-v3-2024-04-23-00-41-40"
   TLS: "false"
+  SETPOD_AZ: "false"
