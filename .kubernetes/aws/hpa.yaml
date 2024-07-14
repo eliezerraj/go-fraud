@@ -10,8 +10,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: go-fraud
-  minReplicas: 1
-  maxReplicas: 3
+  minReplicas: 2
+  maxReplicas: 6
   metrics:
   - type: Resource
     resource:
@@ -24,17 +24,17 @@ spec:
       name: memory
       target:
         type: Utilization
-        averageUtilization: 80
+        averageUtilization: 90
   behavior:
-    scaleDown:
-      stabilizationWindowSeconds: 60
-      policies:
-      - type: Pods
-        value: 1
-        periodSeconds: 30
     scaleUp:
+      stabilizationWindowSeconds: 15
+      policies:
+      - type: Pods #Percent
+        value: 1 #100
+        periodSeconds: 15  
+    scaleDown:
       stabilizationWindowSeconds: 15
       policies:
       - type: Pods
         value: 1
-        periodSeconds: 30
+        periodSeconds: 15
