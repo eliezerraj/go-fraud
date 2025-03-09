@@ -1,11 +1,12 @@
 #docker build -t go-fraud .
 
-FROM golang:1.21 As builder
+FROM golang:1.23.3 As builder
 
 RUN apt-get update && apt-get install bash && apt-get install -y --no-install-recommends ca-certificates
 
 WORKDIR /app
 COPY . .
+RUN go mod tidy
 
 WORKDIR /app/cmd
 RUN go build -o go-fraud -ldflags '-linkmode external -w -extldflags "-static"'

@@ -6,52 +6,43 @@ import(
 	"fmt"
 	"math"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sagemakerruntime"
 
-	"github.com/go-fraud/internal/core"
-	"go.opentelemetry.io/otel"
+	"github.com/go-fraud/internal/core/model"
+	go_core_observ "github.com/eliezerraj/go-core/observability"
 )
 
-var childLogger = log.With().Str("service", "service").Logger()
-//-----------------------------------------------
-type WorkerService struct {
-	sageMakerEndpoint	string
-}
+var tracerProvider go_core_observ.TracerProvider
 
-func NewWorkerService(sageMakerEndpoint	string) *WorkerService{
-	childLogger.Debug().Msg("NewWorkerService")
-
-	return &WorkerService{
-		sageMakerEndpoint:	sageMakerEndpoint,
-	}
-}
-//----------------------------------------------
 type Point struct {
     X float64
     Y float64
 }
 
-func (s WorkerService) CheckPaymentFraud(ctx context.Context, 
-										 payment core.PaymentFraud) (*core.PaymentFraud, error){
+func (s *WorkerService) CheckPaymentFraud(	ctx context.Context, 
+											awsRegion string,
+										 	payment model.PaymentFraud) (*model.PaymentFraud, error){
 	childLogger.Debug().Msg("CheckPaymentFraud")
-	log.Debug().Interface("=======>payment :", payment).Msg("")
+	childLogger.Debug().Interface("=======>payment :", payment).Msg("")
 
-	ctx, svcspan := otel.Tracer("go-fraud").Start(ctx,"svc.CheckPaymentFraud")
-	defer svcspan.End()
-
-	cfg, err := config.LoadDefaultConfig(ctx)
+	// Trace
+	span := tracerProvider.Span(ctx, "service.CheckPaymentFraud")
+	defer span.End()
+	
+	// Load aws config
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(awsRegion))
     if err != nil {
         childLogger.Error().Err(err).Msg("error LoadDefaultConfig")
         return nil, err
     }
 
+	// create sagemaker client
 	client := sagemakerruntime.NewFromConfig(cfg)
 
-	var ohe_card_model_chip, ohe_card_model_virtual,ohe_card_type int
+	// business rule
+	var ohe_card_model_chip, ohe_card_model_virtual, ohe_card_type int
 	if payment.CardModel == "VIRTUAL" {
 		ohe_card_model_chip = 0
 		ohe_card_model_virtual = 1
@@ -60,8 +51,7 @@ func (s WorkerService) CheckPaymentFraud(ctx context.Context,
 		ohe_card_model_virtual = 0
 	}
 
-	ohe_card_type = 1
-
+	// prepare features
     person 			:= Point{0, 0}
     terminal_order 	:= Point{float64(payment.CoordX), float64(payment.CoordY)}
 	distance := math.Sqrt(math.Pow(terminal_order.X-person.X, 2) + math.Pow(terminal_order.Y-person.Y, 2))
@@ -80,20 +70,25 @@ func (s WorkerService) CheckPaymentFraud(ctx context.Context,
 									payment.Avg30Day,
 									payment.TimeBtwTx)
 	
-	log.Debug().Msg("=======>header:distance,ohe_card_model_chip,ohe_card_model_virtual,ohe_card_type,payment.Amount,payment.Tx1Day,payment.Avg1Day,payment.Tx7Day,payment.Avg7Day,payment.Tx30Day,payment.Avg30Day,payment.TimeBtwTx")
-	log.Debug().Interface("=======>payload :", payload).Msg("")
+	childLogger.Debug().Msg("=======>header:distance,ohe_card_model_chip,ohe_card_model_virtual,ohe_card_type,payment.Amount,payment.Tx1Day,payment.Avg1Day,payment.Tx7Day,payment.Avg7Day,payment.Tx30Day,payment.Avg30Day,payment.TimeBtwTx")
+	childLogger.Debug().Interface("=======>payload :", payload).Msg("")
 
-	input := &sagemakerruntime.InvokeEndpointInput{EndpointName: &s.sageMakerEndpoint,
+	// prepare and call sagemaker
+	spanChildSagemaker := tracerProvider.Span(ctx, "service.InvokeEndpoint")
+	input := &sagemakerruntime.InvokeEndpointInput{EndpointName: &s.apiService[0].Url,
 													ContentType:  aws.String("text/csv"),
 													Body:         []byte(payload),
 												}
 	
+
 	resp, err := client.InvokeEndpoint(ctx, input)
 	if err != nil {
 		childLogger.Error().Err(err).Msg("error InvokeEndpoint")
 		return nil, err
 	}
-	
+	defer spanChildSagemaker.End()		
+
+	// handle response
 	responseBody := string(resp.Body)
 	
 	responseFloat, err := strconv.ParseFloat(responseBody, 64)
@@ -104,7 +99,7 @@ func (s WorkerService) CheckPaymentFraud(ctx context.Context,
 
 	payment.Fraud = responseFloat
 
-	log.Debug().Interface("=======> (Fraud) :", payment.Fraud).Msg("")
-
+	childLogger.Debug().Interface("=======> (Fraud) :", payment.Fraud).Msg("")
+								
 	return &payment, nil
 }
