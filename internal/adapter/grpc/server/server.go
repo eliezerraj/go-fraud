@@ -29,6 +29,7 @@ func NewServiceGrpcServer(	appServer *model.AppServer,
 	}
 }
 
+// About get pod information
 func (s *ServiceGrpcServer) GetPodInfo(ctx context.Context, 
 								in *proto.PodInfoRequest) (*proto.PodInfoResponse, error) {
 	childLogger.Debug().Msg("GetPodInfo")
@@ -53,6 +54,7 @@ func (s *ServiceGrpcServer) GetPodInfo(ctx context.Context,
 	return res, nil
 }
 
+// About invoke fraud score model
 func (s *ServiceGrpcServer) CheckPaymentFraud(	ctx context.Context, 
 												in *proto.PaymentRequest) (*proto.PaymentResponse, error) {
 	childLogger.Debug().Msg("CheckPaymentFraud")

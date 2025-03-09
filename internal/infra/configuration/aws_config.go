@@ -7,6 +7,7 @@ import(
 	"github.com/go-fraud/internal/core/model"
 )
 
+// About get AWS service env ver
 func GetAwsServiceEnv() model.AwsService {
 	childLogger.Debug().Msg("GetAwsServiceEnv")
 

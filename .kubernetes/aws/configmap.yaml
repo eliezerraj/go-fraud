@@ -8,9 +8,10 @@ metadata:
 data:
   API_VERSION: "3.0"
   POD_NAME: "go-fraud.k8"
-  GRPC_HOST: ":50052"
+  PORT: ":50052"
   TLS: "false"
   SETPOD_AZ: "false"
   OTEL_EXPORTER_OTLP_ENDPOINT: "arch-eks-01-xray-collector.default.svc.cluster.local:4317"
   
+  AWS_REGION: "us-east-2"
   URL_SERVICE_01: "xgboost-serverless-ep-fraud-model-v3-2024-04-23-00-41-40"

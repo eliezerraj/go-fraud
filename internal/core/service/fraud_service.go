@@ -21,6 +21,7 @@ type Point struct {
     Y float64
 }
 
+// About invoke fraud score model
 func (s *WorkerService) CheckPaymentFraud(	ctx context.Context, 
 											awsRegion string,
 										 	payment model.PaymentFraud) (*model.PaymentFraud, error){

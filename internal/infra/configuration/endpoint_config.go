@@ -6,6 +6,7 @@ import(
 	"github.com/go-fraud/internal/core/model"
 )
 
+// About get services endpoints env var
 func GetEndpointEnv() []model.ApiService {
 	childLogger.Debug().Msg("GetEndpointEnv")
 

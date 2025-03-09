@@ -7,7 +7,6 @@
     cd /mnt/c/Eliezer/workspace/github.com/go-payment/internal
     protoc -I proto proto/fraud.proto --go_out=plugins=grpc:proto
 
-
 ## Handle certs tls
 
     Convert the certs to base64 sercer.cert and server.key
