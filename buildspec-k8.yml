@@ -56,6 +56,7 @@ phases:
       - kubectl apply -f .kubernetes/aws/deployment.yaml
       - kubectl apply -f .kubernetes/aws/netpol.yaml
       - kubectl apply -f .kubernetes/aws/svc-nlb-grpc.yaml
+      - kubectl apply -f .kubernetes/aws/pod_disruption.yaml
 
       - echo Start rollout...   
       - kubectl rollout restart deployment/go-fraud -n test-a
