@@ -6,15 +6,23 @@ import (
 	"time"
 
 	"google.golang.org/grpc/health/grpc_health_v1"
+
+	"github.com/rs/zerolog/log"
   )
 
 
-type HealthChecker struct{}
-
+var childLogger = log.With().Str("infra", "healthcheck").Logger()
 var startTime = time.Now()
 
+type HealthChecker struct{}
+
+func NewHealthChecker() *HealthChecker {
+	return &HealthChecker{}
+}
+
+// About check
 func (s *HealthChecker) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
-	log.Println("Inside Health check Request")
+	childLogger.Info().Msg("Check")
 	//var currentTime = time.Now()
 	var currentStatus = grpc_health_v1.HealthCheckResponse_SERVING
 	// simulating unavailability ater two minutes
@@ -27,8 +35,9 @@ func (s *HealthChecker) Check(ctx context.Context, req *grpc_health_v1.HealthChe
 	return health_check_response, nil
 }
 
+// About Watch
 func (s *HealthChecker) Watch(req *grpc_health_v1.HealthCheckRequest, server grpc_health_v1.Health_WatchServer) error {
-	log.Println("Inside Health check Watch")
+	childLogger.Info().Msg("Watch")
 	//var currentTime = time.Now()
 	var currentStatus = grpc_health_v1.HealthCheckResponse_SERVING
 	// simulating unavailability ater two minutes
@@ -41,6 +50,3 @@ func (s *HealthChecker) Watch(req *grpc_health_v1.HealthCheckRequest, server grp
 	return server.Send(health_check_response)
 }
 
-func NewHealthChecker() *HealthChecker {
-	return &HealthChecker{}
-}
