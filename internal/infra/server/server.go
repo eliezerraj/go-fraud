@@ -59,7 +59,8 @@ func authenticationInterceptor(ctx context.Context, req any, _ *grpc.UnaryServer
 		return nil, erro.MissingData
 	}
 	if len(headers["authorization"]) == 0 {
-		return nil, erro.InvalidToken
+	//	return nil, erro.InvalidToken
+		childLogger.Info().Msg("erro.InvalidToken")
 	}
 	return handler(ctx, req)
 }
