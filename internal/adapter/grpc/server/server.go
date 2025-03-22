@@ -8,20 +8,23 @@ import (
 	"github.com/go-fraud/internal/core/model"
 
 	proto "github.com/go-fraud/internal/adapter/grpc/proto"
+	proto_pod "github.com/go-fraud/internal/core/proto/pod"
+
 	go_core_observ "github.com/eliezerraj/go-core/observability"
 )
 
-var childLogger = log.With().Str("adapter.grpc", "grpc_server").Logger()
+var childLogger = log.With().Str("component","go-fraud").Str("package","internal.adapter.grpc.server").Logger()
+
 var tracerProvider go_core_observ.TracerProvider
 
 type ServiceGrpcServer struct{
-	appServer *model.AppServer
-	workerService *service.WorkerService
+	appServer 		*model.AppServer
+	workerService 	*service.WorkerService
 }
 
 func NewServiceGrpcServer(	appServer *model.AppServer, 
 							workerService *service.WorkerService) *ServiceGrpcServer {
-	childLogger.Debug().Msg("NewServiceGrpcServer")
+	childLogger.Info().Str("func","NewServiceGrpcServer").Send()
 
 	return &ServiceGrpcServer{
 		appServer: appServer,
@@ -31,25 +34,50 @@ func NewServiceGrpcServer(	appServer *model.AppServer,
 
 // About get pod information
 func (s *ServiceGrpcServer) GetPodInfo(ctx context.Context, 
-								in *proto.PodInfoRequest) (*proto.PodInfoResponse, error) {
-	childLogger.Debug().Msg("GetPodInfo")
+										in *proto.PodInfoRequest) (*proto.PodInfoResponse, error) {
+	childLogger.Info().Str("func","GetPodInfo").Send()
 
 	// Trace
 	span := tracerProvider.Span(ctx, "adpater.grpc.server.GetPodInfo")
 	defer span.End()
 	
 	podInfo := proto.PodInfo{	IpAddress: 			s.appServer.InfoPod.IPAddress,
-								PodName: 			s.appServer.InfoPod.PodName,
-								AvailabilityZone:	s.appServer.InfoPod.AvailabilityZone,
-								GrpcHost:			s.appServer.Server.Port,
-								Version:			s.appServer.InfoPod.ApiVersion,
-							}
+									PodName: 			s.appServer.InfoPod.PodName,
+									AvailabilityZone:	s.appServer.InfoPod.AvailabilityZone,
+									GrpcHost:			s.appServer.Server.Port,
+									Version:			s.appServer.InfoPod.ApiVersion,
+								}
 
 	res := &proto.PodInfoResponse {
 		PodInfo: &podInfo,
 	}
 
-	childLogger.Debug().Interface("res :", res).Msg("")
+	childLogger.Info().Interface("res", res).Send()
+
+	return res, nil
+}
+
+// About get pod information
+func (s *ServiceGrpcServer) GetPodInfoNew(ctx context.Context, 
+										in *proto_pod.PodInfoRequest) (*proto_pod.PodInfoResponse, error) {
+	childLogger.Info().Str("func","GetPodInfoNew").Send()
+
+	// Trace
+	span := tracerProvider.Span(ctx, "adpater.grpc.server.GetPodInfoNew")
+	defer span.End()
+	
+	podInfo := proto_pod.PodInfo{	IpAddress: 			s.appServer.InfoPod.IPAddress,
+									PodName: 			s.appServer.InfoPod.PodName,
+									AvailabilityZone:	s.appServer.InfoPod.AvailabilityZone,
+									GrpcHost:			s.appServer.Server.Port,
+									Version:			s.appServer.InfoPod.ApiVersion,
+								}
+
+	res := &proto_pod.PodInfoResponse {
+		PodInfo: &podInfo,
+	}
+
+	childLogger.Info().Interface("res", res).Send()
 
 	return res, nil
 }
@@ -57,8 +85,8 @@ func (s *ServiceGrpcServer) GetPodInfo(ctx context.Context,
 // About invoke fraud score model
 func (s *ServiceGrpcServer) CheckPaymentFraud(	ctx context.Context, 
 												in *proto.PaymentRequest) (*proto.PaymentResponse, error) {
-	childLogger.Debug().Msg("CheckPaymentFraud")
-
+	childLogger.Info().Str("func","CheckPaymentFraud").Send()
+	
 	// Trace
 	span := tracerProvider.Span(ctx, "adpater.grpc.server.CheckPaymentFraud")
 	defer span.End()

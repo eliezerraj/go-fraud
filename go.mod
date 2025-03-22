@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.29.8
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30
 	github.com/aws/aws-sdk-go-v2/service/sagemakerruntime v1.33.1
-	github.com/eliezerraj/go-core v1.0.35
+	github.com/eliezerraj/go-core v1.0.38
 	github.com/golang/protobuf v1.5.4
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/zerolog v1.33.0

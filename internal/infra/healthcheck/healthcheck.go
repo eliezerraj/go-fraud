@@ -9,7 +9,8 @@ import (
   )
 
 
-var childLogger = log.With().Str("infra", "healthcheck").Logger()
+var childLogger = log.With().Str("component","go-fraud").Str("package","internal.infra.healthcheck").Logger()
+
 var startTime = time.Now()
 
 type HealthChecker struct{}
@@ -20,7 +21,8 @@ func NewHealthChecker() *HealthChecker {
 
 // About check
 func (s *HealthChecker) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
-	childLogger.Info().Msg("Check")
+	childLogger.Info().Str("func","Check").Send()
+
 	//var currentTime = time.Now()
 	var currentStatus = grpc_health_v1.HealthCheckResponse_SERVING
 	// simulating unavailability ater two minutes
@@ -35,7 +37,8 @@ func (s *HealthChecker) Check(ctx context.Context, req *grpc_health_v1.HealthChe
 
 // About Watch
 func (s *HealthChecker) Watch(req *grpc_health_v1.HealthCheckRequest, server grpc_health_v1.Health_WatchServer) error {
-	childLogger.Info().Msg("Watch")
+	childLogger.Info().Str("func","Watch").Send()
+
 	//var currentTime = time.Now()
 	var currentStatus = grpc_health_v1.HealthCheckResponse_SERVING
 	// simulating unavailability ater two minutes

@@ -14,13 +14,15 @@ import(
 )
 
 var(
-	logLevel = 	zerolog.DebugLevel
+	logLevel = 	zerolog.InfoLevel // zerolog.InfoLevel zerolog.DebugLevel
 	appServer	model.AppServer
+	childLogger = log.With().Str("component","go-fraud").Str("package", "main").Logger()
 )
 
 // About initialize the enviroment var
 func init(){
-	log.Debug().Msg("init")
+	childLogger.Info().Str("func","init").Send()
+
 	zerolog.SetGlobalLevel(logLevel)
 
 	infoPod, server := configuration.GetInfoPod()
@@ -37,11 +39,7 @@ func init(){
 
 // About main
 func main (){
-	log.Debug().Msg("----------------------------------------------------")
-	log.Debug().Msg("main")
-	log.Debug().Msg("----------------------------------------------------")
-	log.Debug().Interface("appServer :",appServer).Msg("")
-	log.Debug().Msg("----------------------------------------------------")
+	childLogger.Info().Str("func","main").Interface("appServer :",appServer).Send()
 
 	ctx := context.Background()
 

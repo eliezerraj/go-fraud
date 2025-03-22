@@ -28,11 +28,13 @@ import (
 	
 	"github.com/go-fraud/internal/infra/healthcheck"
 	proto "github.com/go-fraud/internal/adapter/grpc/proto"
+	
 
 	"google.golang.org/grpc/metadata"
 )
 
-var childLogger = log.With().Str("infra", "server").Logger()
+var childLogger = log.With().Str("component","go-fraud").Str("package","internal.infra.server").Logger()
+
 var serviceGrpcServer service_grpc_server.ServiceGrpcServer
 var tracer trace.Tracer
 
@@ -42,7 +44,7 @@ type WorkerServer struct {
 
 // About create worker server
 func NewWorkerServer(serviceGrpcServer *service_grpc_server.ServiceGrpcServer) *WorkerServer {
-	childLogger.Debug().Msg("NewWorkerServer")
+	childLogger.Info().Str("func","NewWorkerServer").Send()
 
 	return &WorkerServer{
 		serviceGrpcServer: serviceGrpcServer,
@@ -51,8 +53,7 @@ func NewWorkerServer(serviceGrpcServer *service_grpc_server.ServiceGrpcServer) *
 
 // About authentication intercetor
 func authenticationInterceptor(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-	childLogger.Debug().Msg("----------------------------------------------------")
-	childLogger.Info().Msg("authenticationInterceptor")
+	childLogger.Info().Str("func","authenticationInterceptor").Send()
 
 	headers, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
@@ -68,7 +69,7 @@ func authenticationInterceptor(ctx context.Context, req any, _ *grpc.UnaryServer
 // About start server
 func (w *WorkerServer) StartGrpcServer(	ctx context.Context, 
 										appServer *model.AppServer){
-	childLogger.Info().Msg("StartGrpcServer")
+	childLogger.Info().Str("func","authenticationInterceptor").Send()
 
 	//Otel
 	traceExporter, err := otlptracegrpc.New(ctx, 
@@ -76,7 +77,7 @@ func (w *WorkerServer) StartGrpcServer(	ctx context.Context,
 											otlptracegrpc.WithEndpoint(appServer.ConfigOTEL.OtelExportEndpoint),
 											)
 	if err != nil {
-		childLogger.Error().Err(err).Msg("ERRO otlptracegrpc")
+		childLogger.Error().Err(err).Msg("erro otlptracegrpc")
 	}
 	idg := xray.NewIDGenerator()
 
@@ -118,7 +119,7 @@ func (w *WorkerServer) StartGrpcServer(	ctx context.Context,
 	defer func() {
 		err = tp.Shutdown(ctx)
 		if err != nil{
-			childLogger.Error().Err(err).Msg("Erro closing OTEL tracer !!!")
+			childLogger.Error().Err(err).Send()
 		}
 
 		childLogger.Info().Msg("stopping server...")
@@ -133,10 +134,9 @@ func (w *WorkerServer) StartGrpcServer(	ctx context.Context,
 	// wire
 	proto.RegisterFraudServiceServer(workerGrpcServer, w.serviceGrpcServer)
 
+	// health check
 	healthService := healthcheck.NewHealthChecker()
-
-	grpc_health_v1.RegisterHealthServer(workerGrpcServer, 
-										healthService)
+	grpc_health_v1.RegisterHealthServer(workerGrpcServer, healthService)
 
 	// run server
 	go func(){
